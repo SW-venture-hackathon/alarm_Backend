@@ -6,22 +6,34 @@
 </head>
 <body>
     <h1>Your Google Calendar Events</h1>
+
     {% if events %}
         <ul>
             {% for event in events %}
                 <li>
                     <strong>{{ event.summary }}</strong>
-                    {% if event.start.dateTime %}
-                        ({{ event.start.dateTime }})
+                    <br>
+                    <em>
+                        {% if event.start.dateTime %}
+                            Date & Time: {{ event.start.dateTime }}
+                        {% elif event.start.date %}
+                            Date: {{ event.start.date }}
+                        {% endif %}
+                    </em>
+                    <br>
+                    {% if event.description %}
+                        Description: {{ event.description }}
                     {% else %}
-                        (All-day: {{ event.start.date }})
+                        No additional information available.
                     {% endif %}
+                    <br><br>
                 </li>
             {% endfor %}
         </ul>
     {% else %}
         <p>No events found in your Google Calendar.</p>
     {% endif %}
+    
     <p><a href="{% url 'main' %}">Back to Main</a></p>
 </body>
 </html>

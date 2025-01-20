@@ -49,9 +49,10 @@ def google_redirect(request):
 
 
 def calendar_view(request):
+    """Google Calendar API를 사용하여 일정 가져오기"""
     credentials = request.session.get('credentials')
     if not credentials:
-        return redirect('main')
+        return redirect('main')  # 인증되지 않은 경우 메인 화면으로 이동
 
     access_token = credentials.get('access_token')
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -61,8 +62,10 @@ def calendar_view(request):
     if response.status_code != 200:
         return JsonResponse({"error": "Failed to fetch events", "details": response.json()}, status=400)
 
+    # API에서 가져온 이벤트 데이터
     events = response.json().get('items', [])
 
-    print("Events: ", events)
+    # 이벤트 데이터를 정렬 (시작 시간 기준)
+    events = sorted(events, key=lambda x: x.get('start', {}).get('dateTime', x.get('start', {}).get('date', '')))
 
     return render(request, 'calendar.html', {"events": events})
