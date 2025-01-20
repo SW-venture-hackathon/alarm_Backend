@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -128,4 +128,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 GOOGLE_CLIENT_ID = '538724861287-r4sfr881dg12t3tp8h8cuf7mlcv9vurr.apps.googleusercontent.com'
 GOOGLE_CLIENT_SECRET = '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'
-GOOGLE_REDIRECT_URI = 'http://127.0.0.1:8000/redirect/'
+# GOOGLE_REDIRECT_URI = 'http://127.0.0.1:8000/redirect/'
+
+# 개발 환경과 ngrok 환경 구분
+if os.environ.get("USE_NGROK") == "true":
+    GOOGLE_REDIRECT_URI = "https://<your-ngrok-id>.ngrok.io/redirect/"
+else:
+    GOOGLE_REDIRECT_URI = "http://127.0.0.1:8000/redirect/"

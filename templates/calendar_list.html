@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Public Calendar</title>
+</head>
+<body>
+    <h1>Public Calendar Events</h1>
+    <ul>
+        {% for event in events %}
+        <li>
+            <strong>{{ event.summary }}</strong><br>
+            Start: 
+            {% if event.start.dateTime %}
+                {{ event.start.dateTime }}
+            {% elif event.start.date %}
+                {{ event.start.date }}
+            {% else %}
+                Unknown
+            {% endif %}<br>
+            End:
+            {% if event.end.dateTime %}
+                {{ event.end.dateTime }}
+            {% elif event.end.date %}
+                {{ event.end.date }}
+            {% else %}
+                Unknown
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
