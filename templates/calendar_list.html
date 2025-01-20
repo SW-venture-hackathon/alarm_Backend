@@ -2,32 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Public Calendar</title>
+    <title>Calendar JSON</title>
 </head>
 <body>
-    <h1>Public Calendar Events</h1>
-    <ul>
-        {% for event in events %}
-        <li>
-            <strong>{{ event.summary }}</strong><br>
-            Start: 
-            {% if event.start.dateTime %}
-                {{ event.start.dateTime }}
-            {% elif event.start.date %}
-                {{ event.start.date }}
-            {% else %}
-                Unknown
-            {% endif %}<br>
-            End:
-            {% if event.end.dateTime %}
-                {{ event.end.dateTime }}
-            {% elif event.end.date %}
-                {{ event.end.date }}
-            {% else %}
-                Unknown
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
+    <h1>Calendar Events</h1>
+    <ul id="event-list"></ul>
+
+    <script>
+        // JSON 데이터 가져오기
+        fetch("/get-alarms/")
+            .then(response => response.json())
+            .then(data => {
+                const eventList = document.getElementById("event-list");
+                data.alarms.forEach(alarm => {
+                    const li = document.createElement("li");
+                    li.textContent = `${alarm.title} - ${alarm.date} ${alarm.time}`;
+                    eventList.appendChild(li);
+                });
+            })
+            .catch(error => console.error("Error fetching alarms:", error));
+    </script>
 </body>
 </html>
