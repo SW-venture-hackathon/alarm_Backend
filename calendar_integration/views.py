@@ -6,6 +6,9 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from django.http import JsonResponse
 from datetime import datetime, timedelta
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 
 # Mocked events (캘린더 API로 받아오는 데이터 대신 임시 데이터로 테스트)
@@ -71,13 +74,199 @@ def public_calendar_view(request):
     return render(request, "calendar_list.html", {"alarms": alarm_data})
 
 
-def get_alarms_json(request):
+'''
+def get_event_json(request):
     """일정을 JSON 형태로 반환"""
-    alarm_data = fetch_calendar_events()
-    if "error" in alarm_data:
-        return JsonResponse(alarm_data, status=400)
+    event_data = fetch_calendar_events()  # 구글 캘린더 API 호출 함수
+    if "error" in event_data:
+        return JsonResponse(event_data, status=400)
 
-    return JsonResponse({"alarms": alarm_data})
+    # 응답 데이터
+    response_data = {"alarms": event_data}
+
+    return JsonResponse(response_data, content_type="application/json")
+'''
+
+def get_event_json(request):
+    """Google Calendar API 데이터를 JSON 형태로 반환"""
+    event_data = fetch_calendar_events()
+
+    if "error" in event_data:
+        response = JsonResponse(event_data, status=400)
+    else:
+        response = JsonResponse({"alarms": event_data}, content_type="application/json")
+
+    # Access-Control-Allow-Origin 헤더 추가
+    response["Access-Control-Allow-Origin"] = "*"
+    return response
+
+def parse_time_to_minutes(time_str):
+    """HH:MM 형식의 문자열을 분 단위로 변환"""
+    hours, minutes = map(int, time_str.split(":"))
+    return hours * 60 + minutes
+
+
+
+'''
+@csrf_exempt
+def set_alarm(request):
+    """get_event_json 함수를 사용하여 일정 데이터를 기반으로 알람 생성"""
+    if request.method == "POST":
+        try:
+            # 요청 데이터 파싱
+            data = json.loads(request.body)
+            prep_time = parse_time_to_minutes(data.get("prep_time"))  # 준비 시간 (분)
+            alarm_interval = parse_time_to_minutes(data.get("alarm_interval"))  # 알람 주기 (분)
+            wake_up_offset = parse_time_to_minutes(data.get("wake_up_offset"))  # 기상 시간 (분)
+            departure_offset = parse_time_to_minutes(data.get("departure_offset"))  # 출발 시간 (분)
+
+            # 같은 파일 내의 get_event_json 함수 호출
+            events_response = get_event_json(request)
+
+            # JsonResponse 객체를 JSON으로 변환
+            if events_response.status_code != 200:
+                return events_response  # 오류가 있는 경우 그대로 반환
+            events_data = json.loads(events_response.content)
+
+            events = events_data.get("alarms", [])
+            if not events:
+                return JsonResponse({"message": "No events found in the calendar"}, status=200)
+
+            alarms_by_event = []  # 각 일정에 대한 알람 저장
+
+            for event in events:
+                # 일정 시작 시간 파싱
+                title = event.get("title", "No Title")
+                date_str = event.get("date")
+                time_str = event.get("time")
+                if not date_str or not time_str:
+                    continue
+
+                # 날짜와 시간 결합하여 datetime 객체 생성
+                event_time = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+
+                # 기상 시간 및 출발 시간 계산
+                wake_up_time = event_time - timedelta(minutes=wake_up_offset)
+                departure_time = event_time - timedelta(minutes=departure_offset)
+
+                # 알람 생성
+                alarms = []
+
+                # 기상 시간에 따른 알람 생성
+                current_time = wake_up_time - timedelta(minutes=prep_time)
+                while current_time < wake_up_time:
+                    alarms.append(current_time.strftime("%H:%M"))
+                    current_time += timedelta(minutes=alarm_interval)
+                current_time = wake_up_time
+                while current_time < departure_time:
+                    alarms.append(current_time.strftime("%H:%M"))
+                    current_time += timedelta(minutes=alarm_interval)
+
+                # 출발 시간에 따른 알람 생성
+                current_time = departure_time - timedelta(minutes=prep_time)
+                while current_time < departure_time:
+                    alarms.append(current_time.strftime("%H:%M"))
+                    current_time += timedelta(minutes=alarm_interval)
+                current_time = departure_time
+                while current_time < event_time:
+                    alarms.append(current_time.strftime("%H:%M"))
+                    current_time += timedelta(minutes=alarm_interval)
+
+                # 일정별 결과 저장
+                alarms_by_event.append({
+                    "title": title,
+                    "event_time": event_time.strftime("%Y-%m-%d %H:%M"),
+                    "alarms": alarms
+                })
+
+            return JsonResponse({"alarms_by_event": alarms_by_event, "message": "Alarm schedules created successfully!"})
+
+        except (ValueError, KeyError) as e:
+            return JsonResponse({"error": f"Invalid data: {str(e)}"}, status=400)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)'''
+
+
+@csrf_exempt
+def set_alarm(request):
+    """일정 데이터를 기반으로 알람 생성"""
+    if request.method == "POST":
+        try:
+            # 요청 데이터 파싱
+            data = json.loads(request.body)
+            prep_time = parse_time_to_minutes(data.get("prep_time"))  # 준비 시간 (분)
+            alarm_interval = parse_time_to_minutes(data.get("alarm_interval"))  # 알람 주기 (분)
+            wake_up_offset = parse_time_to_minutes(data.get("wake_up_offset"))  # 기상 시간 (분)
+            departure_offset = parse_time_to_minutes(data.get("departure_offset"))  # 출발 시간 (분)
+
+            # 같은 파일 내의 get_event_json 함수 호출
+            events_response = get_event_json(request)
+
+            # JsonResponse 객체를 JSON으로 변환
+            if events_response.status_code != 200:
+                return events_response  # 오류가 있는 경우 그대로 반환
+            events_data = json.loads(events_response.content)
+
+            events = events_data.get("alarms", [])
+            if not events:
+                return JsonResponse({"message": "No events found in the calendar"}, status=200)
+
+            alarms_by_event = []  # 각 일정에 대한 알람 저장
+
+            for event in events:
+                # 일정 시작 시간 파싱
+                title = event.get("title", "No Title")
+                date_str = event.get("date")
+                time_str = event.get("time")
+                if not date_str or not time_str:
+                    continue
+
+                # 날짜와 시간 결합하여 datetime 객체 생성
+                event_time = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+
+                # 기상 시간 및 출발 시간 계산
+                wake_up_time = event_time - timedelta(minutes=wake_up_offset)
+                departure_time = event_time - timedelta(minutes=departure_offset)
+
+                # 알람 생성
+                alarms = []
+
+                # 기상 시간 알람 생성 (앞으로 4개, 뒤로 2개)
+                for i in range(3, 0, -1):
+                    alarm_time = wake_up_time - timedelta(minutes=i * alarm_interval)
+                    if alarm_time.time() < wake_up_time.time():
+                        alarms.append(alarm_time.strftime("%H:%M"))
+                alarms.append(wake_up_time.strftime("%H:%M"))
+                for i in range(1, 3):  # 고정된 2개
+                    alarm_time = wake_up_time + timedelta(minutes=i * alarm_interval)
+                    if alarm_time.time() > wake_up_time.time():
+                        alarms.append(alarm_time.strftime("%H:%M"))
+
+                # 출발 시간 알람 생성 (앞으로 4개, 뒤로 2개)
+                for i in range(3, 0, -1):
+                    alarm_time = departure_time - timedelta(minutes=i * alarm_interval)
+                    if alarm_time.time() < departure_time.time():
+                        alarms.append(alarm_time.strftime("%H:%M"))
+                alarms.append(departure_time.strftime("%H:%M"))
+                for i in range(1, 3):  # 고정된 2개
+                    alarm_time = departure_time + timedelta(minutes=i * alarm_interval)
+                    if alarm_time.time() > departure_time.time():
+                        alarms.append(alarm_time.strftime("%H:%M"))
+
+                # 중복 제거 및 정렬
+                alarms = sorted(set(alarms))
+                alarms_by_event.append({
+                    "title": title,
+                    "event_time": event_time.strftime("%Y-%m-%d %H:%M"),
+                    "alarms": alarms
+                })
+
+            return JsonResponse({"alarms_by_event": alarms_by_event, "message": "Alarm schedules created successfully!"})
+
+        except (ValueError, KeyError) as e:
+            return JsonResponse({"error": f"Invalid data: {str(e)}"}, status=400)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
 def google_login(request):

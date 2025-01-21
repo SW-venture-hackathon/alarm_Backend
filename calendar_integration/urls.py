@@ -7,5 +7,6 @@ urlpatterns = [
     path('redirect/', views.google_redirect, name='google_redirect'),  # Google OAuth 리디렉션
     path('calendar/', views.calendar_view, name='calendar'),  # 캘린더 화면
     path("", views.public_calendar_view, name="public_calendar"),
-    path("get-alarms/", views.get_alarms_json, name="get_alarms"),
+    path("get-event/", views.get_event_json, name="get_event"),
+    path('set-alarm/', views.set_alarm, name='set_alarm'),
 ]

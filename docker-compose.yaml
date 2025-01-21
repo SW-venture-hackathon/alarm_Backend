@@ -1,13 +1,14 @@
 version: "3.9"
+
 services:
-  web:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:8000"  # 로컬 포트와 컨테이너 포트 연결
     volumes:
-      - .:/app
+      - .:/app  # 로컬 디렉토리를 컨테이너와 동기화
     environment:
-      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=smart_alarm.settings
     command: python manage.py runserver 0.0.0.0:8000
